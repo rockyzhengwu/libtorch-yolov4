@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <vector>
 
+
 struct Mish : torch::nn::Module
 {
   Mish()
@@ -164,7 +165,7 @@ void Darknet::create_modules()
   std::vector<int> out_widths;
   std::vector<int> out_heights;
 
-  int index = 0;
+  size_t index = 0;
 
   printf("layer       filters    size              input                output\n");
   for (i = 0; i < config_.blocks_.size(); i++)
@@ -199,7 +200,7 @@ void Darknet::create_modules()
       module->push_back(conv);
       int width = (out_widths.back() + 2 * pad - kernel_size )/stride + 1;
       int height = (out_heights.back() +2 * pad - kernel_size )/stride + 1;
-      printf("%5d %-6s %4d    %d x %d / %d   %3d x %3d x%4d   ->   %3d x %3d x%4d\n",
+      printf("%5zu %-6s %4d    %d x %d / %d   %3d x %3d x%4d   ->   %3d x %3d x%4d\n",
                  i, "conv", filters, kernel_size, kernel_size, stride,
                  out_widths.back(), out_heights.back(), out_channels.back(), width, height, filters);
       out_heights.push_back(height);
@@ -236,7 +237,7 @@ void Darknet::create_modules()
       int32_t width = out_widths.back() * stride;
       int32_t height = out_heights.back() * stride;
       UpsampleLayer uplayer(stride);
-      printf("%5d %-6s           * %d   %3d x %3d x%4d   ->   %3d x %3d x%4d \n" ,
+      printf("%5zu %-6s           * %d   %3d x %3d x%4d   ->   %3d x %3d x%4d \n" ,
                 i, "upsample", stride, out_widths.back(), out_heights.back(), out_channels.back(), width, height, out_channels.back());
       module->push_back(uplayer);
       out_widths.push_back(width);
@@ -252,7 +253,7 @@ void Darknet::create_modules()
 
       int width = out_widths.back()/ stride;
       int height = out_heights.back() / stride;
-      printf("%5d %-6s         %d x %d / %d   %3d x %3d x%4d   ->   %3d x %3d x%4d\n",
+      printf("%5zu %-6s         %d x %d / %d   %3d x %3d x%4d   ->   %3d x %3d x%4d\n",
              i, "max", size, size, stride, 
              out_widths.back(), out_heights.back(), out_channels.back(), width, height,out_channels.back());
 
@@ -263,7 +264,7 @@ void Darknet::create_modules()
     else if (block_type == "shortcut")
     {
       int from = Config::get_int_from_block(block, "from", 0);
-      printf("%5d %-6s %d \n", i, "shortcut", from);
+      printf("%5zu %-6s %d \n", i, "shortcut", from);
       block["from"] = std::to_string(from);
       config_.blocks_[i] = block;
       EmptyLayer layer;
@@ -279,7 +280,6 @@ void Darknet::create_modules()
       std::string layers_info = Config::get_string_from_block(block, "layers", "");
       std::vector<int> layers;
       Config::split(layers_info, layers, ",");
-      std::string::size_type sz;
       int32_t total_channel = 0;
       for(size_t j=0; j< layers.size(); j++){
         int ix = layers[j] > 0 ? layers[j] : (i + layers[j]);
@@ -287,13 +287,13 @@ void Darknet::create_modules()
         layers[j] = ix;
       }
       if (layers.size()==4){
-        printf("%5d %-6s %d %d %d %d                              %d\n",
+        printf("%5zu %-6s %d %d %d %d                              %d\n",
          i, "route",  layers[0], layers[1], layers[2], layers[3], total_channel);
       }else if(layers.size()==2){
-        printf("%5d %-6s %d %d                                    %d\n",
+        printf("%5zu %-6s %d %d                                    %d\n",
          i, "route", layers[0], layers[1], total_channel);
       }else if(layers.size()==1){
-        printf("%5d %-6s %d                                       %d\n",  
+        printf("%5zu %-6s %d                                       %d\n",  
         i, "route",  layers[0], total_channel);
       } else {
         printf("not suppert route \n");
@@ -317,7 +317,7 @@ void Darknet::create_modules()
       std::vector<int> anchors;
       Config::split(anchor_info, anchors, ",");
       std::vector<float> anchor_points;
-      printf("%5d %-6s   \n", i, "yolo" );
+      printf("%5zu %-6s   \n", i, "yolo" );
       int pos;
       for (size_t j = 0; j < masks.size(); j++)
       {
@@ -337,7 +337,7 @@ void Darknet::create_modules()
     }
     module_list.push_back(module);
     char *module_key = new char[strlen("layer_") + sizeof(index) + 1];
-    sprintf(module_key, "%s%d", "layer_", index);
+    sprintf(module_key, "%s%zu", "layer_", index);
     register_module(module_key, module);
     index += 1;
     assert(out_widths.size() == index+1);
@@ -526,10 +526,10 @@ torch::Tensor Darknet::nms(torch::Tensor prediction, int num_classes, float conf
     // get unique classes
     std::vector<torch::Tensor> img_classes;
 
-    for (int m = 0, len = image_prediction_data.size(0); m < len; m++)
+    for (size_t m = 0, len = image_prediction_data.size(0); m < len; m++)
     {
       bool found = false;
-      for (int n = 0; n < img_classes.size(); n++)
+      for (size_t n = 0; n < img_classes.size(); n++)
       {
         auto ret = (image_prediction_data[m][6] == img_classes[n]);
         if (torch::nonzero(ret).size(0) > 0)
@@ -542,7 +542,7 @@ torch::Tensor Darknet::nms(torch::Tensor prediction, int num_classes, float conf
         img_classes.push_back(image_prediction_data[m][6]);
     }
 
-    for (int k = 0; k < img_classes.size(); k++)
+    for (size_t k = 0; k < img_classes.size(); k++)
     {
       auto cls = img_classes[k];
 
@@ -683,7 +683,7 @@ torch::Tensor Darknet::forward(torch::Tensor x)
 
 void Darknet::show_config()
 {
-  int i;
+  size_t i;
   for (i = 0; i < config_.blocks_.size(); i++)
   {
     std::cout << config_.blocks_[i] << std::endl;
