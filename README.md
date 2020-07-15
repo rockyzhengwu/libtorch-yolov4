@@ -2,6 +2,10 @@
 
 yolov4 implement by libtorch in c++
 
+### LibTorch version
+LibTorch 1.5.1+cu101
+
+
 ### usage
 can only inference by now 
 
