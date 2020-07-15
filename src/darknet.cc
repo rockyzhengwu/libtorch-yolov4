@@ -279,6 +279,8 @@ void Darknet::create_modules()
       // L 85: -1, 61
       std::string layers_info = Config::get_string_from_block(block, "layers", "");
       std::vector<int> layers;
+      int groups = Config::get_int_from_block(block, "groups", 0);
+      // size_t group_id = Config::get_int_from_block(block, "group_id", 0);
       Config::split(layers_info, layers, ",");
       int32_t total_channel = 0;
       for(size_t j=0; j< layers.size(); j++){
@@ -293,6 +295,10 @@ void Darknet::create_modules()
         printf("%5zu %-6s %d %d                                    %d\n",
          i, "route", layers[0], layers[1], total_channel);
       }else if(layers.size()==1){
+        if (groups!=0){
+          total_channel = total_channel / groups;
+          block["chunk_size"] = std::to_string(total_channel);
+        }
         printf("%5zu %-6s %d                                       %d\n",  
         i, "route",  layers[0], total_channel);
       } else {
@@ -319,11 +325,14 @@ void Darknet::create_modules()
       std::vector<float> anchor_points;
       printf("%5zu %-6s   \n", i, "yolo" );
       int pos;
+      size_t num= Config::get_int_from_block(block, "num", 0);
+      size_t stride = anchors.size() / num;
+
       for (size_t j = 0; j < masks.size(); j++)
       {
         pos = masks[j];
-        anchor_points.push_back(anchors[pos * 2]);
-        anchor_points.push_back(anchors[pos * 2 + 1]);
+        anchor_points.push_back(anchors[pos * stride]);
+        anchor_points.push_back(anchors[pos * stride + 1]);
       }
       DetectionLayer layer(anchor_points);
       module->push_back(layer);
@@ -631,12 +640,19 @@ torch::Tensor Darknet::forward(torch::Tensor x)
     else if (layer_type == "route")
     {
       std::vector<int> layers;
+      int groups = Config::get_int_from_block(block, "groups", 0);
+      size_t group_id = Config::get_int_from_block(block, "group_id", 0);
       Config::split(block["layers"], layers, ",");
       for(size_t j =0; j< layers.size(); j++){
         layers[j] = layers[j]  > 0 ? layers[j] : layers[j] + i;
       }
       if(layers.size()==1){
         x = outputs[layers[0]];
+        if (groups!=0){
+          int64_t chunk_size = Config::get_int_from_block(block, "chunk_size", 0);
+          std::vector<torch::Tensor> group_tensor = at::split(x, chunk_size, 1);
+          x = group_tensor.at(group_id);
+        }
       }else if(layers.size()==2){
         torch::Tensor map_1 = outputs[layers[0]];
         torch::Tensor map_2 = outputs[layers[1]];
@@ -688,4 +704,8 @@ void Darknet::show_config()
   {
     std::cout << config_.blocks_[i] << std::endl;
   }
+}
+
+int Darknet::get_input_size(){
+  return Config::get_int_from_block(config_.blocks_[0], "height", 0);
 }

@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     std::cerr << "usage: yolov4 <cfg_path>, <weight_path> <image path>\n";
     return -1;
   }
-  int input_image_size = 608;
+  int input_image_size = 416;
    torch::DeviceType device_type;
    if(torch::cuda::is_available()){
       device_type = torch::kCUDA;
@@ -24,6 +24,7 @@ int main(int argc, char* argv[])
   torch::Device device(device_type);
   std::string cfg_file = argv[1];
   Darknet net(cfg_file.c_str(), &device);
+  input_image_size = net.get_input_size();
   std::cout << "loading weight ..." << std::endl;
   net.load_darknet_weights(argv[2]);
   std::cout << "weight loaded ..." << std::endl;

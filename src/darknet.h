@@ -19,6 +19,7 @@ struct Darknet: torch::nn::Module {
     torch::Tensor predict(torch::Tensor input, int num_classes, float confidence, float nms_conf=0.4);
     torch::Tensor nms(torch::Tensor input, int num_classes, float confidence, float nms_conf=0.4);
     void show_config();
+    int get_input_size();
 
 
 
