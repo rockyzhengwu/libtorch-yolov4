@@ -284,7 +284,7 @@ void Darknet::create_modules()
       Config::split(layers_info, layers, ",");
       int32_t total_channel = 0;
       for(size_t j=0; j< layers.size(); j++){
-        int ix = layers[j] > 0 ? layers[j] : (i + layers[j]);
+        int ix = layers[j] > 0 ? layers[j]+1 : (i + layers[j]);
         total_channel += out_channels[ ix ];
         layers[j] = ix;
       }
